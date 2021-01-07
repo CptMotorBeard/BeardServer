@@ -44,6 +44,12 @@ project "BeardServer"
 		"%{prj.name}/src/**.cpp"
 	}
 	
+	includedirs
+	{
+		vendorPath .. "/nlohmann/json/include",
+		"%{prj.name}/src/"
+	}
+	
 	pchheader "pch.h"
 	pchsource "%{prj.name}/src/pch.cpp"
 	

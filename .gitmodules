@@ -1,0 +1,3 @@
+[submodule "BeardServer/vendor/nlohmann/json"]
+	path = BeardServer/vendor/nlohmann/json
+	url = https://github.com/nlohmann/json.git
