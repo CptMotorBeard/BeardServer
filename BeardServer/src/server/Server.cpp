@@ -2,6 +2,7 @@
 
 #include "BeardServer_Config.h"
 #include "common/Utils.h"
+#include "client/ClientConnectionManager.h"
 #include "Server.h"
 
 namespace BeardServer
@@ -12,11 +13,14 @@ namespace BeardServer
 			: m_ListeningSocket(0)
 			, m_bIsRunning(false)
 		{
-
+			m_ClientConnectionManager = new ClientConnectionManager();
 		}
 
 		Server::~Server()
 		{
+			delete(m_ClientConnectionManager);
+			m_ClientConnectionManager = nullptr;
+
 			Shutdown();
 		}
 
@@ -59,7 +63,7 @@ namespace BeardServer
 			{
 				prevTime = curTime;
 				common::GetTimeInMilliseconds(curTime);
-				time_t dt = curTime - prevTime;
+				long dt = (curTime - prevTime);
 
 				OnUpdateStart(dt);
 
@@ -67,11 +71,10 @@ namespace BeardServer
 				if (newClient != INVALID_SOCKET)
 				{
 					// Add to the list of clients
-					send(newClient, "Thank you for connecting\n", 26, 0);
+					m_ClientConnectionManager->AddNewConnection(newClient);
 				}
 
-				// update clients
-				closesocket(newClient);
+				m_ClientConnectionManager->Update(dt);
 
 				OnUpdateEnd(dt);
 
@@ -84,10 +87,10 @@ namespace BeardServer
 			return 0;
 		}
 
-		void Server::OnUpdateStart(time_t dt) {}
-		void Server::OnUpdateEnd(time_t dt) {}
+		void Server::OnUpdateStart(long dt) {}
+		void Server::OnUpdateEnd(long dt) {}
 
-		SOCKET Server::CreateListeningSocket()
+		int Server::CreateListeningSocket()
 		{			
 			sockaddr_in hint;
 			memset(&hint, 0, sizeof(hint));
@@ -128,7 +131,7 @@ namespace BeardServer
 			return sock;
 		}
 
-		SOCKET Server::CheckNewConnections(SOCKET listeningSocket)
+		int Server::CheckNewConnections(int listeningSocket)
 		{
 			SOCKET clientSocket = INVALID_SOCKET;
 

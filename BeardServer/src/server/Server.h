@@ -6,6 +6,8 @@ namespace BeardServer
 {
 	namespace server
 	{
+		class ClientConnectionManager;
+
 		class Server
 		{
 		public:
@@ -27,13 +29,15 @@ namespace BeardServer
 			Bind the socket to an ip address and port and tell winsock that the socket is for listening
 			\return The newly created socket or 0 on error
 			*/
-			SOCKET CreateListeningSocket();
-			SOCKET CheckNewConnections(SOCKET listeningSocket);
-			void OnUpdateStart(time_t dt);
-			void OnUpdateEnd(time_t dt);
+			int CreateListeningSocket();
+			int CheckNewConnections(int listeningSocket);
+			void OnUpdateStart(long dt);
+			void OnUpdateEnd(long dt);
+
+			ClientConnectionManager* m_ClientConnectionManager;
 
 			bool m_bIsRunning;
-			SOCKET m_ListeningSocket;
+			int m_ListeningSocket;
 		};
 	}
 }
