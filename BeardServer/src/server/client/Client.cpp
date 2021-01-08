@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Client.h"
 #include "BeardServer_Config.h"
+#include <errno.h>
 
 namespace BeardServer
 {
@@ -27,10 +28,30 @@ namespace BeardServer
 
 		void Client::Update(long dt)
 		{
+			if (!IsConnected())
+				return;
+
 			const std::chrono::milliseconds heartbeatInterval(BEARDSERVER_HEARTBEAT_MS_INTERVAL);
 			const std::chrono::milliseconds maxTimeout(BEARDSERVER_MAX_TIMEOUT_MS);
 
 			std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+
+			if (now - m_LastRecvDataTime > maxTimeout)
+			{
+				CloseConnection();
+			}
+			else if (now - m_LastSentDataTime > heartbeatInterval)
+			{
+				// TODO :: Create a real heartbeat message
+				Send("[Heartbeat] :: Badump\r\n");
+				m_LastSentDataTime = now;
+			}
+		}
+
+		std::string Client::Receive()
+		{
+			if (!IsConnected())
+				return "";
 
 			std::string fullMessage = "";
 
@@ -40,33 +61,50 @@ namespace BeardServer
 			// TODO :: This shouldn't be blocking. Get another thread, or only do a receive once per update
 			if (bytesReceived > 0)
 			{
-				std::string temp(buf);
-				fullMessage += temp.substr(0, bytesReceived);
+				for (int i = 0; i < bytesReceived; ++i)
+				{
+					fullMessage += buf[i];
+				}
 
 				while ((bytesReceived = recv(m_Socket, buf, BEARDSERVER_RECV_BUFF_SIZE, 0)) > 0 && fullMessage.size() < BEARDSERVER_MAX_RECV_BUFF)
 				{
-					temp = std::string(buf);
-					fullMessage += temp.substr(0, bytesReceived);
+					for (int i = 0; i < bytesReceived; ++i)
+					{
+						fullMessage += buf[i];
+					}
 				}
 
 				std::cout << fullMessage;
-				m_LastRecvDataTime = now;
+				m_LastRecvDataTime = std::chrono::system_clock::now();
 			}
-
-			if (now - m_LastRecvDataTime > maxTimeout)
+			else if (bytesReceived == 0)
 			{
+				std::cout << "Client Disconnected" << std::endl;
 				CloseConnection();
 			}
-			else if (now - m_LastSentDataTime > heartbeatInterval)
+			else
 			{
-				// TODO :: Create a real heartbeat message
-				Send("[Heartbeat] :: Badump");
-				m_LastSentDataTime = now;
+				int error = errno;
+
+				if (error && error != EWOULDBLOCK && error != EAGAIN)
+				{
+					std::cout << "Error receiving from client" << std::endl;
+					CloseConnection();
+				}
+				else if (error)
+				{
+					std::cout << "Error receiving from client :: EWOULDBLOCK || EAGAIN" << std::endl;
+				}
 			}
+
+			return fullMessage;
 		}
 
 		int  Client::Send(std::string message)
 		{
+			if (!IsConnected())
+				return 0;
+
 			int bytesSent = send(m_Socket, message.c_str(), message.size() + 1, 0);
 
 			if (bytesSent > 0)

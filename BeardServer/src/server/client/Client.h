@@ -18,6 +18,7 @@ namespace BeardServer
 
 			void Update(long dt);
 			int Send(std::string message);
+			std::string Receive();
 			bool IsConnected() const;
 			void CloseConnection(bool reconnect = false);
 
