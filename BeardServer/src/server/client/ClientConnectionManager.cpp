@@ -48,6 +48,16 @@ namespace BeardServer
 
 		bool ClientConnectionManager::UpdateNewConnections(long dt)
 		{
+			/*
+				TODO ::
+				- get user id
+				- load profile
+				- create new profile if none exists
+				- send profile to user
+				- wait for response
+				- then move to active connections
+			*/
+
 			for (auto& client : m_NewClientsList)
 			{
 				client->Send("Welcome\r\n");
@@ -64,29 +74,16 @@ namespace BeardServer
 			ClientList tempClientList;
 			tempClientList.resize(m_ClientList.size());
 
-			std::map<Client*, std::string> messageQueue;
-
-			std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-			time_t now_c = std::chrono::system_clock::to_time_t(now);
-			std::tm now_tm = *std::localtime(&now_c);
-
-			char dateBuff[70];
-			strftime(dateBuff, sizeof(dateBuff), "%c", &now_tm);
-
 			for (auto& client : m_ClientList)
 			{
 				if (client != nullptr)
 				{
 					if (client->IsConnected())
 					{
-						std::string message = client->Receive();
+						client->Receive();
 						client->Update(dt);
 						tempClientList.push_back(client);
 
-						if (message != "")
-						{
-							messageQueue.insert(std::pair<Client*, std::string>(client, "[" + std::string(dateBuff) + "]: " + message));
-						}
 					}
 					else
 					{
@@ -109,19 +106,6 @@ namespace BeardServer
 
 			m_ClientList.clear();
 			m_ClientList = std::move(tempClientList);
-
-			for (const auto& client : m_ClientList)
-			{
-				for (const auto& message : messageQueue)
-				{
-					if (message.first != client)
-					{
-						client->Send(message.second);
-					}
-				}
-			}
-
-			messageQueue.clear();
 
 			return m_ClientList.size() > 0;
 		}

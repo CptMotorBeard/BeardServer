@@ -2,6 +2,7 @@
 #include "Client.h"
 #include "BeardServer_Config.h"
 #include <errno.h>
+#include "nlohmann/json.hpp"
 
 namespace BeardServer
 {
@@ -48,10 +49,10 @@ namespace BeardServer
 			}
 		}
 
-		std::string Client::Receive()
+		void Client::Receive()
 		{
 			if (!IsConnected())
-				return "";
+				return;
 
 			std::string fullMessage = "";
 
@@ -59,9 +60,17 @@ namespace BeardServer
 			int bytesReceived = recv(m_Socket, buf, BEARDSERVER_RECV_BUFF_SIZE, 0);
 
 			// TODO :: This shouldn't be blocking. Get another thread, or only do a receive once per update
-			if (bytesReceived > 0)
+			// Each packet should have an 8 byte header followed by the packet data
+			if (bytesReceived > 8)
 			{
-				for (int i = 0; i < bytesReceived; ++i)
+				// Header contains a packet identifier followed by the packet length
+
+				int packetID = *(int*)(void*)buf;
+				int packetLength = *(int*)(void*)(buf + 4);
+
+				// Everything after the packet header is the packet data
+
+				for (int i = 8; i < bytesReceived; ++i)
 				{
 					fullMessage += buf[i];
 				}
@@ -74,7 +83,33 @@ namespace BeardServer
 					}
 				}
 
-				std::cout << fullMessage;
+				const char* kGuid = "guid";
+				const char* kData = "data";
+
+				nlohmann::json jsonValue = nlohmann::json::parse(fullMessage);
+				std::string guid;
+				nlohmann::json dataValue;
+
+				if (jsonValue.is_object())
+				{
+					if (jsonValue.contains(kGuid) && jsonValue[kGuid].is_string())
+					{
+						 guid = jsonValue[kGuid].get<std::string>();
+					}
+
+					if (jsonValue.contains(kData) && jsonValue[kData].is_object())
+					{
+						dataValue = jsonValue[kData];
+					}
+					
+					// Create a transmission with the packet id, the guid and the data value
+					// Handle the transmission by passing on the transmission and the client over to a transmission handler
+				}
+
+				std::cout << "Packet ID: " << packetID << std::endl;
+				std::cout << "guid: " << guid << std::endl;
+				std::cout << "data: " << dataValue.dump(4) << std::endl;
+
 				m_LastRecvDataTime = std::chrono::system_clock::now();
 			}
 			else if (bytesReceived == 0)
@@ -82,25 +117,9 @@ namespace BeardServer
 				std::cout << "Client Disconnected" << std::endl;
 				CloseConnection();
 			}
-			else
-			{
-				int error = errno;
-
-				if (error && error != EWOULDBLOCK && error != EAGAIN)
-				{
-					std::cout << "Error receiving from client" << std::endl;
-					CloseConnection();
-				}
-				else if (error)
-				{
-					std::cout << "Error receiving from client :: EWOULDBLOCK || EAGAIN" << std::endl;
-				}
-			}
-
-			return fullMessage;
 		}
 
-		int  Client::Send(std::string message)
+		int  Client::Send(const std::string& message)
 		{
 			if (!IsConnected())
 				return 0;
