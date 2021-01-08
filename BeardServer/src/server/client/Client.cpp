@@ -32,6 +32,27 @@ namespace BeardServer
 
 			std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
 
+			std::string fullMessage = "";
+
+			char buf[BEARDSERVER_RECV_BUFF_SIZE];
+			int bytesReceived = recv(m_Socket, buf, BEARDSERVER_RECV_BUFF_SIZE, 0);
+
+			// TODO :: This shouldn't be blocking. Get another thread, or only do a receive once per update
+			if (bytesReceived > 0)
+			{
+				std::string temp(buf);
+				fullMessage += temp.substr(0, bytesReceived);
+
+				while ((bytesReceived = recv(m_Socket, buf, BEARDSERVER_RECV_BUFF_SIZE, 0)) > 0 && fullMessage.size() < BEARDSERVER_MAX_RECV_BUFF)
+				{
+					temp = std::string(buf);
+					fullMessage += temp.substr(0, bytesReceived);
+				}
+
+				std::cout << fullMessage;
+				m_LastRecvDataTime = now;
+			}
+
 			if (now - m_LastRecvDataTime > maxTimeout)
 			{
 				CloseConnection();
