@@ -2,6 +2,7 @@
 #include "Client.h"
 #include "BeardServer_Config.h"
 #include <errno.h>
+#include "server/TransmissionHandler.h"
 #include "nlohmann/json.hpp"
 
 namespace BeardServer
@@ -60,17 +61,25 @@ namespace BeardServer
 			int bytesReceived = recv(m_Socket, buf, BEARDSERVER_RECV_BUFF_SIZE, 0);
 
 			// TODO :: This shouldn't be blocking. Get another thread, or only do a receive once per update
-			// Each packet should have an 8 byte header followed by the packet data
-			if (bytesReceived > 8)
+			/* 
+			* Each packet received should contain the following:
+			*	4 bytes			- Total Packet size
+			*	4 bytes			- Packet ID
+			*	4 bytes			- packet data size
+			*	remaining bytes	- packet data
+			*/
+			if (bytesReceived > 12)
 			{
 				// Header contains a packet identifier followed by the packet length
 
-				int packetID = *(int*)(void*)buf;
-				int packetLength = *(int*)(void*)(buf + 4);
+				const int totalPacketSize	= *(int*)(void*)(buf + 0);
+				const int packetID			= *(int*)(void*)(buf + 4);
+				const int dataLength		= *(int*)(void*)(buf + 8);
 
+				// TODO :: verify the packet is set correctly to try to avoid bad data
 				// Everything after the packet header is the packet data
 
-				for (int i = 8; i < bytesReceived; ++i)
+				for (int i = 12; i < bytesReceived; ++i)
 				{
 					fullMessage += buf[i];
 				}
@@ -83,32 +92,17 @@ namespace BeardServer
 					}
 				}
 
-				const char* kGuid = "guid";
-				const char* kData = "data";
+				const char* kActionId	= "act_id";
+				const char* kDataId		= "dta_id";
+
+				// TODO :: safely parse the full message, non json might break things
+				// TODO :: verify action and data exists
 
 				nlohmann::json jsonValue = nlohmann::json::parse(fullMessage);
-				std::string guid;
-				nlohmann::json dataValue;
+				std::string action = jsonValue[kActionId];
+				nlohmann::json data = jsonValue[kDataId];
 
-				if (jsonValue.is_object())
-				{
-					if (jsonValue.contains(kGuid) && jsonValue[kGuid].is_string())
-					{
-						 guid = jsonValue[kGuid].get<std::string>();
-					}
-
-					if (jsonValue.contains(kData) && jsonValue[kData].is_object())
-					{
-						dataValue = jsonValue[kData];
-					}
-					
-					// Create a transmission with the packet id, the guid and the data value
-					// Handle the transmission by passing on the transmission and the client over to a transmission handler
-				}
-
-				std::cout << "Packet ID: " << packetID << std::endl;
-				std::cout << "guid: " << guid << std::endl;
-				std::cout << "data: " << dataValue.dump(4) << std::endl;
+				TransmissionHandler::HandleTransmission(this, action, packetID, data);
 
 				m_LastRecvDataTime = std::chrono::system_clock::now();
 			}
