@@ -78,16 +78,17 @@ namespace BeardServer
 			{
 				if (client != nullptr)
 				{
-					if (client->IsConnected())
+					bool cleanUpClient = true;
+					if (client->IsConnected() && client->Receive().IsSuccess())
 					{
-						client->Receive();
+						cleanUpClient = false;
 						client->Update(dt);
 						tempClientList.push_back(client);
-
 					}
-					else
+
+					if (cleanUpClient)
 					{
-						std::cout << "Cleaning up client" << std::endl;
+						Logger::Log(Logger::Severity::Info, "Cleaning up client");
 						client->CloseConnection();
 
 						delete client;

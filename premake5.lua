@@ -5,15 +5,15 @@ function defaultConfigurations()
 		systemversion "latest"
 
 	filter "configurations:Debug"
-		defines "CT_DEBUG"
+		defines "BS_DEBUG"
 		symbols "On"
 		
 	filter "configurations:OptDebug"
-		defines "CT_OPTDEBUG"
+		defines "BS_OPTDEBUG"
 		optimize "On"
 		
 	filter "configurations:Distribution"
-		defines "CT_DIST"
+		defines "BS_DIST"
 		optimize "On"
 end
 
@@ -41,7 +41,8 @@ project "BeardServer"
 	files
 	{
 		"%{prj.name}/src/**.h",
-		"%{prj.name}/src/**.cpp"
+		"%{prj.name}/src/**.cpp",
+		"%{prj.name}/src/**.cs"
 	}
 	
 	includedirs

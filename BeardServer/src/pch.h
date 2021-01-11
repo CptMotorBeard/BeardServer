@@ -28,4 +28,10 @@
 #include <WS2tcpip.h>
 #pragma comment (lib, "ws2_32.lib")
 
+#include <server/shared/ResponseCodes.h>
+#include <server/shared/NetworkActions.h>
+
+#include <common/Defines.h>
+#include <server/Result.h>
+
 #endif

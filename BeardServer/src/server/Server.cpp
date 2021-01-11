@@ -30,14 +30,14 @@ namespace BeardServer
 			int wsFailure = WSAStartup(MAKEWORD(2, 2), &wsaData);
 			if (wsFailure)
 			{
-				std::cerr << "Failed to initialize winsock" << std::endl;
+				Logger::Log(Logger::Severity::Critical, "Failed to initialize winsock");
 				return false;
 			}
 
 			m_ListeningSocket = CreateListeningSocket();
 			if (m_ListeningSocket == 0)
 			{
-				std::cerr << "Failed to create the listening socket" << std::endl;
+				Logger::Log(Logger::Severity::Critical, "Failed to create the listening socket");
 				WSACleanup();
 
 				return false;
@@ -63,7 +63,7 @@ namespace BeardServer
 			{
 				prevTime = curTime;
 				common::GetTimeInMilliseconds(curTime);
-				long dt = (curTime - prevTime);
+				long dt = (long)(curTime - prevTime);
 
 				OnUpdateStart(dt);
 
@@ -102,21 +102,21 @@ namespace BeardServer
 			SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
 			if (sock == INVALID_SOCKET)
 			{
-				std::cerr << "Failed to create a socket" << std::endl;
+				Logger::Log(Logger::Severity::Critical, "Failed to create a socket");
 				return 0;
 			}
 
 			int res = bind(sock, (sockaddr*)&hint, sizeof(hint));
 			if (res != NO_ERROR)
 			{
-				std::cerr << "Failed to bind a socket" << std::endl;
+				Logger::Log(Logger::Severity::Critical, "Failed to bind a socket");
 				return 0;
 			}
 
 			res = listen(sock, BEARDSERVER_LISTEN_SOCKET_BACKLOG);
 			if (res != NO_ERROR)
 			{
-				std::cerr << "Failed to listen on a socket" << std::endl;
+				Logger::Log(Logger::Severity::Critical, "Failed to listen on a socket");
 				return 0;
 			}
 
@@ -124,7 +124,7 @@ namespace BeardServer
 			res = ioctlsocket(sock, FIONBIO, &iMode);
 			if (res != NO_ERROR)
 			{
-				std::cerr << "Failed to set socket non-blocking" << std::endl;
+				Logger::Log(Logger::Severity::Critical, "Failed to set socket non-blocking");
 				return 0;
 			}
 
@@ -142,7 +142,7 @@ namespace BeardServer
 			if (clientSocket == INVALID_SOCKET)
 				return clientSocket;
 
-			char host[NI_MAXHOST];	// Client's remote name
+			char host[NI_MAXHOST];		// Client's remote name
 			char service[NI_MAXSERV];	// Service (i.e port) the client is connecting on
 
 			memset(host, 0, NI_MAXHOST);
@@ -158,7 +158,7 @@ namespace BeardServer
 				}
 			}
 
-			std::cout << host << " connected on port: " << service << std::endl;
+			Logger::Log(Logger::Severity::Info, "%s connected on port: %s", host, service);
 
 			return clientSocket;
 		}

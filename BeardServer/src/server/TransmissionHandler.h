@@ -17,10 +17,10 @@ namespace BeardServer
 		class TransmissionHandler
 		{
 		public:
-			using TransmissionHandlerFunc = std::function<void(Client&, const std::string&, unsigned int, const nlohmann::json&)>;
+			using TransmissionHandlerFunc = std::function<Result(Client&, const std::string&, unsigned int, const nlohmann::json&)>;
 
-			static void RegisterTransmissionHandler(const std::string& action, TransmissionHandlerFunc function);
-			static void HandleTransmission(Client* user, const std::string& action, unsigned int transmissionId, const nlohmann::json& transmissionData);
+			static Result RegisterTransmissionHandler(const std::string& action, TransmissionHandlerFunc function);
+			static Result HandleTransmission(Client* user, const std::string& action, unsigned int transmissionId, const nlohmann::json& transmissionData);
 		private:
 			static std::unordered_map<std::string, TransmissionHandlerFunc> m_TransmissionMap;
 		};

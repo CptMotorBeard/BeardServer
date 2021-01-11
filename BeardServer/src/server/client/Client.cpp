@@ -50,10 +50,10 @@ namespace BeardServer
 			}
 		}
 
-		void Client::Receive()
+		Result Client::Receive()
 		{
 			if (!IsConnected())
-				return;
+				return Result(shared::ResponseCodes::ClientDisconnected);
 
 			std::string fullMessage = "";
 
@@ -76,8 +76,12 @@ namespace BeardServer
 				const int packetID			= *(int*)(void*)(buf + 4);
 				const int dataLength		= *(int*)(void*)(buf + 8);
 
-				// TODO :: verify the packet is set correctly to try to avoid bad data
+				// verify the packet is set correctly to try to avoid bad data
+				SERVER_VERIFY(((totalPacketSize - 12) == dataLength), shared::ResponseCodes::InvalidPacket, "Received an invalid packet");
+
 				// Everything after the packet header is the packet data
+
+				// TODO :: we know the data length so we can create the buffer of an appropriate size
 
 				for (int i = 12; i < bytesReceived; ++i)
 				{
@@ -92,25 +96,29 @@ namespace BeardServer
 					}
 				}
 
-				const char* kActionId	= "act_id";
-				const char* kDataId		= "dta_id";
-
 				// TODO :: safely parse the full message, non json might break things
-				// TODO :: verify action and data exists
-
 				nlohmann::json jsonValue = nlohmann::json::parse(fullMessage);
-				std::string action = jsonValue[kActionId];
-				nlohmann::json data = jsonValue[kDataId];
 
-				TransmissionHandler::HandleTransmission(this, action, packetID, data);
-
+				SERVER_VERIFY(jsonValue.contains(shared::NetworkKeys::kAction), shared::ResponseCodes::InvalidJson, "Sent a packet without an action");				
+				
+				std::string action = jsonValue[shared::NetworkKeys::kAction];
+				nlohmann::json data = "";
+				if (jsonValue.contains(shared::NetworkKeys::kData))
+					data = jsonValue[shared::NetworkKeys::kData];
+				
 				m_LastRecvDataTime = std::chrono::system_clock::now();
+
+				return TransmissionHandler::HandleTransmission(this, action, packetID, data);				
 			}
 			else if (bytesReceived == 0)
 			{
-				std::cout << "Client Disconnected" << std::endl;
+				Logger::Log(Logger::Severity::Info, "Client has disconnected");
 				CloseConnection();
+
+				return Result(shared::ResponseCodes::ClientDisconnected);
 			}
+
+			return Result::Success();
 		}
 
 		int  Client::Send(const std::string& message)
