@@ -60,7 +60,6 @@ namespace BeardServer
 
 			for (auto& client : m_NewClientsList)
 			{
-				client->Send("Welcome\r\n");
 				m_ClientList.push_back(client);
 			}
 

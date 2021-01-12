@@ -76,8 +76,8 @@ namespace BeardServer
 				const int packetID			= *(int*)(void*)(buf + 4);
 				const int dataLength		= *(int*)(void*)(buf + 8);
 
-				// verify the packet is set correctly to try to avoid bad data
-				SERVER_VERIFY(((totalPacketSize - 12) == dataLength), shared::ResponseCodes::InvalidPacket, "Received an invalid packet");
+				// verify the packet is set correctly to try to avoid bad data. totalPacketSize is not included in the total size of the packet
+				SERVER_VERIFY(((totalPacketSize - 8) == dataLength), shared::ResponseCodes::InvalidPacket, "Received an invalid packet");
 
 				// Everything after the packet header is the packet data
 
@@ -121,7 +121,34 @@ namespace BeardServer
 			return Result::Success();
 		}
 
-		int  Client::Send(const std::string& message)
+		int Client::SendTransmission(std::string& action, Result actionResult, int transmissionId)
+		{
+			return SendTransmissionImpl(action, actionResult, transmissionId, {});
+		}
+
+		int Client::SendTransmission(std::string& action, Result actionResult, int transmissionId, const nlohmann::json& data)
+		{
+			return SendTransmissionImpl(action, actionResult, transmissionId, &data);
+		}
+
+		int Client::SendTransmissionImpl(const std::string& action, Result actionResult, int transmissionId, std::optional<const nlohmann::json *> data)
+		{
+			SERVER_ASSERT(!action.empty(), "Transmissions should always send with actions");
+
+			nlohmann::json packet;
+			
+			packet[shared::NetworkKeys::kAction] = action;
+			packet[shared::NetworkKeys::kResponseCode] = (int)(actionResult.GetResponseCode());
+
+			if (data.has_value())
+			{
+				packet[shared::NetworkKeys::kData] = *(data.value());
+			}
+
+			return Send(nlohmann::to_string(packet), transmissionId);
+		}
+
+		int Client::Send(const std::string& message)
 		{
 			if (!IsConnected())
 				return 0;
@@ -130,6 +157,55 @@ namespace BeardServer
 
 			if (bytesSent > 0)
 				m_LastSentDataTime = std::chrono::system_clock::now();
+
+			return bytesSent;
+		}
+
+		void PlaceIntInCharBuffer(char* buffer, int value)
+		{
+			buffer[0] = value >> (0 * 8);
+			buffer[1] = value >> (1 * 8);
+			buffer[2] = value >> (2 * 8);
+			buffer[3] = value >> (3 * 8);
+		}
+
+		int Client::Send(const std::string& message, int transmissionId)
+		{
+			if (!IsConnected())
+				return 0;
+
+			/*
+			* Each packet received should contain the following:
+			*	4 bytes			- Total Packet size
+			*	4 bytes			- Packet ID
+			*	4 bytes			- packet data size
+			*	remaining bytes	- packet data
+			*/
+
+			int dataSize = message.size();
+			// totalPacketSize is not included in the total size of the packet
+			int totalPacketSize = dataSize + 8;
+
+			char* buffer = new char[((size_t)totalPacketSize) + 4];
+			memset(buffer, 0, ((size_t)totalPacketSize) + 4);
+
+			PlaceIntInCharBuffer((buffer + 0), totalPacketSize);
+			PlaceIntInCharBuffer((buffer + 4), transmissionId);
+			PlaceIntInCharBuffer((buffer + 8), dataSize);
+
+			char* packetMessage = (buffer + 12);
+			for (int i = 0; i < dataSize; ++i)
+			{
+				packetMessage[i] = message[i];
+			}
+
+			int bytesSent = send(m_Socket, buffer, message.size() + 1, 0);
+
+			if (bytesSent > 0)
+				m_LastSentDataTime = std::chrono::system_clock::now();
+
+			delete[] buffer;
+			buffer = nullptr;
 
 			return bytesSent;
 		}
