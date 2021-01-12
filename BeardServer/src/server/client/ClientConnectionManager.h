@@ -20,7 +20,7 @@ namespace BeardServer
 
 			bool Update(long dt);
 			bool AddNewConnection(int socket);
-		private:
+		protected:
 			bool UpdateNewConnections(long dt);
 			bool UpdateActiveConnections(long dt);
 

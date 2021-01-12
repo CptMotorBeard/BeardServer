@@ -11,7 +11,7 @@ namespace BeardServer
 		class Server
 		{
 		public:
-			Server();
+			Server(ClientConnectionManager* clientConnectionManager);
 			~Server();
 
 			bool Init();

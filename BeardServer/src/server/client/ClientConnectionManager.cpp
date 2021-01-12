@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "ClientConnectionManager.h"
+#include "Client.h"
 #include <ctime>
-#include "server/client/Client.h"
 #include "server/Server.h"
 
 namespace BeardServer

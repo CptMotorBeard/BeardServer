@@ -9,11 +9,11 @@ namespace BeardServer
 {
 	namespace server
 	{
-		Server::Server()
+		Server::Server(ClientConnectionManager* clientConnectionManager)
 			: m_ListeningSocket(0)
 			, m_bIsRunning(false)
+			, m_ClientConnectionManager(clientConnectionManager)
 		{
-			m_ClientConnectionManager = new ClientConnectionManager();
 		}
 
 		Server::~Server()
