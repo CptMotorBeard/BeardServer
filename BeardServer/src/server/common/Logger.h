@@ -22,6 +22,11 @@ namespace BeardServer
 
 			static std::string Log(Severity severity, const char* message, ...);
 
+			static inline std::string FormatLogMessage(const char* message, const std::string& arg)
+			{
+				return FormatLogMessage(message, arg.c_str());
+			}
+
 			static inline std::string FormatLogMessage(const char* message, const char* arg)
 			{
 				size_t bufferLength = 0;

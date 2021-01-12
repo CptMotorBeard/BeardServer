@@ -18,8 +18,8 @@ namespace BeardServer
 			~Client();
 
 			void Update(long dt);
-			int SendTransmission(std::string& action, Result actionResult, int transmissionId);
-			int SendTransmission(std::string& action, Result actionResult, int transmissionId, const nlohmann::json& data);
+			int SendTransmission(const std::string& action, Result actionResult, int transmissionId);
+			int SendTransmission(const std::string& action, Result actionResult, int transmissionId, const nlohmann::json& data);
 			Result Receive();
 			bool IsConnected() const;
 			void CloseConnection(bool reconnect = false);

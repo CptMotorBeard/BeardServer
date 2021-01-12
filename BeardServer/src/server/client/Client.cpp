@@ -121,12 +121,12 @@ namespace BeardServer
 			return Result::Success();
 		}
 
-		int Client::SendTransmission(std::string& action, Result actionResult, int transmissionId)
+		int Client::SendTransmission(const std::string& action, Result actionResult, int transmissionId)
 		{
 			return SendTransmissionImpl(action, actionResult, transmissionId, {});
 		}
 
-		int Client::SendTransmission(std::string& action, Result actionResult, int transmissionId, const nlohmann::json& data)
+		int Client::SendTransmission(const std::string& action, Result actionResult, int transmissionId, const nlohmann::json& data)
 		{
 			return SendTransmissionImpl(action, actionResult, transmissionId, &data);
 		}
@@ -199,7 +199,7 @@ namespace BeardServer
 				packetMessage[i] = message[i];
 			}
 
-			int bytesSent = send(m_Socket, buffer, message.size() + 1, 0);
+			int bytesSent = send(m_Socket, buffer, ((size_t)totalPacketSize) + 4, 0);
 
 			if (bytesSent > 0)
 				m_LastSentDataTime = std::chrono::system_clock::now();

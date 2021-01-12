@@ -10,8 +10,10 @@
 do															\
 {															\
 	if (!(value))											\
-	BeardServer::server::Logger::Log(BeardServer::server::Logger::Severity::Error, "Assert failed at: %s:%d, Msg:%s", __FILE__, __LINE__, BeardServer::server::Logger::FormatLogMessage(message, ##__VA_ARGS__).c_str());	\
-	DEBUG_BREAK();											\
+	{														\
+		BeardServer::server::Logger::Log(BeardServer::server::Logger::Severity::Error, "Assert failed at: %s:%d, Msg:%s", __FILE__, __LINE__, BeardServer::server::Logger::FormatLogMessage(message, ##__VA_ARGS__).c_str());	\
+		DEBUG_BREAK();										\
+	}														\
 } while(false)
 
 // This verify should only be used when a result should be returned
