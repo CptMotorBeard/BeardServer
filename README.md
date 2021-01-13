@@ -26,4 +26,5 @@ Functions passed to this call must have the following:
 	unsigned int            -> transmission id
 	const nlohmann::json&   -> transmission data
 	
-This registration is static, so it can be called from any class
+This registration is static, so it can be called from any class.
+Client can be subclassed and if it is, Client::HandleTransmission should be overwritten. When done this way, a custom TransmissionHandler should be made. TransmissionHandler is a static class however, but the premise is the same for each one. Trying to create a templated version of TransmissionHandler resulted in a template hell.
