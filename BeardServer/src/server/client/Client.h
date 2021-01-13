@@ -10,6 +10,44 @@ namespace BeardServer
 {
 	namespace server
 	{
+		struct MessageHeader
+		{
+			/*
+			* Each packet received should contain the following:
+			*	4 bytes			- Total Packet size
+			*	4 bytes			- Packet ID
+			*	4 bytes			- packet data size
+			*	remaining bytes	- packet data
+			*/
+		public:
+			uint32_t TotalPacketSize;
+			uint32_t PacketId;
+			uint32_t PacketDataSize;
+
+			const static int HeaderSize = 12;
+
+			bool IsValidHeader() const
+			{
+				return (TotalPacketSize - 8) == PacketDataSize;
+			}
+
+			void PlaceInCharBuffer(char* buffer)
+			{
+				PlaceIntInCharBuffer((buffer + 0), TotalPacketSize);
+				PlaceIntInCharBuffer((buffer + 4), PacketId);
+				PlaceIntInCharBuffer((buffer + 8), PacketDataSize);
+			}
+
+		private:
+			void PlaceIntInCharBuffer(char* buffer, uint32_t value)
+			{
+				buffer[0] = value >> (0 * 8);
+				buffer[1] = value >> (1 * 8);
+				buffer[2] = value >> (2 * 8);
+				buffer[3] = value >> (3 * 8);
+			}
+		};
+
 		class Client
 		{
 		public:

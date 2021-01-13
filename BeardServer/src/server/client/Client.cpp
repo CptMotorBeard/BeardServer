@@ -61,28 +61,17 @@ namespace BeardServer
 			int bytesReceived = recv(m_Socket, buf, BEARDSERVER_RECV_BUFF_SIZE, 0);
 
 			// TODO :: This shouldn't be blocking. Get another thread, or only do a receive once per update
-			/* 
-			* Each packet received should contain the following:
-			*	4 bytes			- Total Packet size
-			*	4 bytes			- Packet ID
-			*	4 bytes			- packet data size
-			*	remaining bytes	- packet data
-			*/
-			if (bytesReceived > 12)
+			
+			if (bytesReceived > MessageHeader::HeaderSize)
 			{
-				// Header contains a packet identifier followed by the packet length
-
-				const int totalPacketSize	= *(int*)(void*)(buf + 0);
-				const int packetID			= *(int*)(void*)(buf + 4);
-				const int dataLength		= *(int*)(void*)(buf + 8);
+				const MessageHeader header = *(MessageHeader*)(void*)buf;
 
 				// verify the packet is set correctly to try to avoid bad data. totalPacketSize is not included in the total size of the packet
-				SERVER_VERIFY(((totalPacketSize - 8) == dataLength), shared::ResponseCodes::InvalidPacket, "Received an invalid packet");
+				SERVER_VERIFY(header.IsValidHeader(), shared::ResponseCodes::InvalidPacket, "Received an invalid packet");
 
 				// Everything after the packet header is the packet data
 
 				// TODO :: we know the data length so we can create the buffer of an appropriate size
-
 				for (int i = 12; i < bytesReceived; ++i)
 				{
 					fullMessage += buf[i];
@@ -95,10 +84,10 @@ namespace BeardServer
 						fullMessage += buf[i];
 					}
 				}
+			
+				nlohmann::json jsonValue = nlohmann::json::parse(fullMessage, nullptr, false);				
 
-				// TODO :: safely parse the full message, non json might break things
-				nlohmann::json jsonValue = nlohmann::json::parse(fullMessage);
-
+				SERVER_VERIFY(!jsonValue.is_discarded() && jsonValue.is_object(), shared::ResponseCodes::InvalidJson, "Invalid JSON sent with packet %d", header.PacketId);
 				SERVER_VERIFY(jsonValue.contains(shared::NetworkKeys::kAction), shared::ResponseCodes::InvalidJson, "Sent a packet without an action");				
 				
 				std::string action = jsonValue[shared::NetworkKeys::kAction];
@@ -108,7 +97,7 @@ namespace BeardServer
 				
 				m_LastRecvDataTime = std::chrono::system_clock::now();
 
-				return HandleTransmission(action, packetID, data);
+				return HandleTransmission(action, header.PacketId, data);
 			}
 			else if (bytesReceived == 0)
 			{
@@ -166,45 +155,28 @@ namespace BeardServer
 			return bytesSent;
 		}
 
-		void PlaceIntInCharBuffer(char* buffer, int value)
-		{
-			buffer[0] = value >> (0 * 8);
-			buffer[1] = value >> (1 * 8);
-			buffer[2] = value >> (2 * 8);
-			buffer[3] = value >> (3 * 8);
-		}
-
 		int Client::Send(const std::string& message, int transmissionId)
 		{
 			if (!IsConnected())
 				return 0;
 
-			/*
-			* Each packet received should contain the following:
-			*	4 bytes			- Total Packet size
-			*	4 bytes			- Packet ID
-			*	4 bytes			- packet data size
-			*	remaining bytes	- packet data
-			*/
+			MessageHeader header;
+			header.PacketDataSize = message.size();
+			header.TotalPacketSize = header.PacketDataSize + 8;
+			header.PacketId = transmissionId;
 
-			int dataSize = message.size();
-			// totalPacketSize is not included in the total size of the packet
-			int totalPacketSize = dataSize + 8;
+			char* buffer = new char[((size_t)header.TotalPacketSize) + 4];
+			memset(buffer, 0, ((size_t)header.TotalPacketSize) + 4);
 
-			char* buffer = new char[((size_t)totalPacketSize) + 4];
-			memset(buffer, 0, ((size_t)totalPacketSize) + 4);
-
-			PlaceIntInCharBuffer((buffer + 0), totalPacketSize);
-			PlaceIntInCharBuffer((buffer + 4), transmissionId);
-			PlaceIntInCharBuffer((buffer + 8), dataSize);
+			header.PlaceInCharBuffer(buffer);
 
 			char* packetMessage = (buffer + 12);
-			for (int i = 0; i < dataSize; ++i)
+			for (int i = 0; i < header.PacketDataSize; ++i)
 			{
 				packetMessage[i] = message[i];
 			}
 
-			int bytesSent = send(m_Socket, buffer, ((size_t)totalPacketSize) + 4, 0);
+			int bytesSent = send(m_Socket, buffer, ((size_t)header.TotalPacketSize) + 4, 0);
 
 			if (bytesSent > 0)
 				m_LastSentDataTime = std::chrono::system_clock::now();
