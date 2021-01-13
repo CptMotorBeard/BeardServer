@@ -24,6 +24,9 @@ namespace BeardServer
 			bool IsConnected() const;
 			void CloseConnection(bool reconnect = false);
 
+		protected:
+			virtual Result HandleTransmission(const std::string& action, unsigned int transmissionId, const nlohmann::json& transmissionData);
+
 		private:
 			int SendTransmissionImpl(const std::string& action, Result actionResult, int transmissionId, std::optional<const nlohmann::json *> data);
 			

@@ -108,7 +108,7 @@ namespace BeardServer
 				
 				m_LastRecvDataTime = std::chrono::system_clock::now();
 
-				return TransmissionHandler::HandleTransmission(this, action, packetID, data);				
+				return HandleTransmission(action, packetID, data);
 			}
 			else if (bytesReceived == 0)
 			{
@@ -119,6 +119,11 @@ namespace BeardServer
 			}
 
 			return Result::Success();
+		}
+
+		Result Client::HandleTransmission(const std::string& action, unsigned int transmissionId, const nlohmann::json& transmissionData)
+		{
+			return TransmissionHandler::HandleTransmission(this, action, transmissionId, transmissionData);
 		}
 
 		int Client::SendTransmission(const std::string& action, Result actionResult, int transmissionId)
