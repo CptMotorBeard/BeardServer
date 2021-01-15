@@ -18,7 +18,7 @@ namespace BeardServer
 	}
 }
 
-int main()
+int example_main()
 {	
 	BeardServer::server::Server srv(new BeardServer::server::ClientConnectionManager());
 	BeardServer::server::TransmissionHandler::RegisterTransmissionHandler(shared::NetworkActions::kGeneralResponse, BeardServer::server::GeneralTransmission);

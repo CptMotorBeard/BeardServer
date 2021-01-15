@@ -32,7 +32,7 @@ vendorPath = "BeardServer/vendor"
 
 project "BeardServer"
 	location "BeardServer/project"
-	kind "ConsoleApp"
+	kind "StaticLib"
 	language "C++"
 	
 	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
